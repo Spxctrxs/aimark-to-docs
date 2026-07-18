@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mark to Docs</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+
+        :root {
+            color-scheme: light;
+            --bg: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            --surface: rgba(255, 255, 255, 0.85);
+            --surface-strong: rgba(255, 255, 255, 0.95);
+            --border: rgba(148, 163, 184, 0.3);
+            --text: #0f172a;
+            --muted: #475569;
+            --accent: #3b82f6;
+        }
+
+        body[data-theme="dark"] {
+            color-scheme: dark;
+            --bg: linear-gradient(135deg, #0f172a 0%, #1e2937 100%);
+            --surface: rgba(15, 23, 42, 0.85);
+            --surface-strong: rgba(15, 23, 42, 0.95);
+            --border: rgba(148, 163, 184, 0.2);
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --accent: #60a5fa;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        
+        .title-font {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .glass {
+            background: var(--surface);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15);
+        }
+
+        #preview {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 3rem 2.5rem;
+            background: white;
+            color: #111827;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        body[data-theme="dark"] #preview {
+            background: #1f2937;
+            color: #f1f5f9;
+        }
+
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.75rem;
+            min-height: calc(100vh - 190px);
+        }
+
+        textarea {
+            font-family: ui-monospace, monospace;
+            resize: none;
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .prose {
+            color: inherit;
+        }
+
+        .prose h1, .prose h2, .prose h3 {
+            color: inherit;
+            scroll-margin-top: 2rem;
+        }
+
+        .math-block {
+            margin: 1.15rem 0;
+            overflow-x: auto;
+        }
+
+        .math-block .katex-display {
+            margin: 0.5em 0;
+        }
+
+        .math-inline {
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 0.15em;
+        }
+
+        .glass-button {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        .footer-card {
+            margin-top: 1.5rem;
+            padding: 1rem 1.25rem;
+            border-radius: 1.25rem;
+            font-size: 0.92rem;
+            line-height: 1.7;
+        }
+
+        .side-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            width: 180px;
+            flex-shrink: 0;
+        }
+
+        .side-actions button {
+            width: 100%;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen" data-theme="dark">
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-2xl font-bold text-white">A</div>
+                <h1 class="title-font text-4xl font-semibold tracking-tighter">AI Mark to Docs</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="themeToggle" 
+                        class="glass px-5 py-2.5 rounded-3xl text-sm font-medium flex items-center gap-2 hover:shadow-md">
+                    <span id="themeLabel">Light Mode</span>
+                </button>
+                <div class="px-4 py-2 glass rounded-3xl text-sm flex items-center gap-2">
+                    <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    Live Preview
+                </div>
+            </div>
+        </div>
+
+        <div class="split">
+            <!-- Editor -->
+            <div class="glass rounded-3xl p-7 flex flex-col">
+                <div class="flex justify-between items-center mb-5">
+                    <h2 class="text-xl font-semibold">Markdown Editor</h2>
+                    <button onclick="clearEditor()" 
+                            class="px-5 py-2 text-sm font-medium rounded-2xl hover:bg-white/10 transition-colors">
+                        Clear
+                    </button>
+                </div>
+                <textarea id="input" 
+                          class="flex-1 w-full p-6 rounded-3xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm leading-relaxed"
+                          spellcheck="false">## Welcome to AI Mark to Docs
+
+Paste your AI-generated Markdown output here for preview and export.
+
+### Mathematics
+Inline: $E = mc^2$
+
+Block equation:
+$$
+\int_{0}^{\infty} e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}
+$$
+
+### Tables and Lists
+| Feature | Status |
+|---------|--------|
+| Markdown Rendering | Complete |
+| KaTeX Equations | Supported |
+| Export Options | DOCX, PDF, HTML |
+
+- Real-time updates
+- High contrast preview
+- Professional exports</textarea>
+            </div>
+
+            <!-- Preview -->
+            <div class="glass rounded-3xl p-7 flex flex-col overflow-hidden">
+                <div class="flex justify-between items-center mb-5">
+                    <h2 class="text-xl font-semibold">Live Preview</h2>
+                    <div class="text-sm text-[var(--muted)]">Marked + KaTeX</div>
+                </div>
+                <div class="flex-1 overflow-auto rounded-3xl border border-[var(--border)] bg-white p-2">
+                    <div id="preview" class="prose prose-slate max-w-none min-h-full px-8 py-6"></div>
+                </div>
+            </div>
+
+            <div class="side-actions">
+                <button onclick="exportDocx()" class="glass-button px-5 py-4 bg-white text-zinc-900 rounded-2xl font-semibold shadow-inner">
+                    DOCX
+                </button>
+                <button onclick="exportPDF()" class="glass-button px-5 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-semibold">
+                    PDF
+                </button>
+                <button onclick="exportHTML()" class="glass-button px-5 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-semibold">
+                    HTML
+                </button>
+                <button onclick="copyMarkdown()" class="glass-button px-5 py-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-medium">
+                    Copy Markdown
+                </button>
+            </div>
+        </div>
+
+        <div class="footer-card glass">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <p class="font-semibold">Made by Spxctxrs (Alex Brian Kyalo Spectres)</p>
+                    <p class="text-[var(--muted)]">Built with a polished markdown preview experience for fast document drafting.</p>
+                </div>
+                <div class="text-sm text-[var(--muted)]">
+                    <span class="font-medium">Assistants & libraries:</span> Marked, KaTeX, Highlight.js, Tailwind CSS, and MAI-Code-1-Flash
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('input');
+        const preview = document.getElementById('preview');
+        const themeToggle = document.getElementById('themeToggle');
+
+        function applyTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            const label = document.getElementById('themeLabel');
+            if (label) label.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+            localStorage.setItem('theme', theme);
+        }
+
+        function toggleTheme() {
+            const current = document.body.getAttribute('data-theme');
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        // Initialize theme
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+
+        if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+
+        function renderPreview() {
+            const md = input.value || '# Start typing...';
+            const mathTokens = [];
+
+            const renderMath = (source, displayMode) => {
+                if (!window.katex) return '';
+                try {
+                    return katex.renderToString(source.trim(), {
+                        displayMode,
+                        throwOnError: false,
+                        strict: false,
+                        trust: true
+                    });
+                } catch (error) {
+                    return '<span class="text-red-500">Math error</span>';
+                }
+            };
+
+            const addMathToken = (expr, displayMode) => {
+                const token = `%%MATH_TOKEN_${mathTokens.length}%%`;
+                const markup = displayMode
+                    ? `<div class="math-block">${renderMath(expr, true)}</div>`
+                    : `<span class="math-inline">${renderMath(expr, false)}</span>`;
+                mathTokens.push(markup);
+                return token;
+            };
+
+            let markdown = md
+                .replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => addMathToken(expr, true))
+                .replace(/\\\[([\s\S]+?)\\\]/g, (_, expr) => addMathToken(expr, true))
+                .replace(/\\begin\{([^}]+)\}([\s\S]+?)\\end\{[^}]+\}/g, (_, env, expr) => addMathToken(expr, true))
+                .replace(/(?<!\\)\$([^$]+?)\$(?!\$)/g, (_, expr) => addMathToken(expr, false));
+
+            let html = marked.parse(markdown, {
+                gfm: true,
+                breaks: true,
+                headerIds: false,
+                smartLists: true
+            });
+
+            mathTokens.forEach((markup, index) => {
+                html = html.replace(`%%MATH_TOKEN_${index}%%`, markup);
+            });
+            
+            preview.innerHTML = html;
+            
+            document.querySelectorAll('#preview pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        }
+
+        let debounceTimer;
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(renderPreview, 120);
+        });
+
+        window.onload = renderPreview;
+
+        function clearEditor() {
+            if (confirm('Clear editor content?')) {
+                input.value = '';
+                renderPreview();
+            }
+        }
+
+        function exportHTML() {
+            const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Mark to Docs Export</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 30px; line-height: 1.75; color: #111827; }
+        .prose { max-width: none; }
+    </style>
+</head>
+<body class="prose">
+${preview.innerHTML}
+</body>
+</html>`;
+
+            const blob = new Blob([fullHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ai-mark-to-docs.html';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportPDF() {
+            const printContent = `
+                <html>
+                <head>
+                    <title>AI Mark to Docs</title>
+                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+                    <style>
+                        @page { margin: 1.8cm; }
+                        body { font-family: system-ui, sans-serif; line-height: 1.7; color: #111827; }
+                        .prose { max-width: none; }
+                    </style>
+                </head>
+                <body>${preview.innerHTML}</body>
+                </html>`;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+            
+            setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+            }, 600);
+        }
+
+        function exportDocx() {
+            const markdownText = input.value.trim();
+            
+            // Enhanced export: Generate rich HTML optimized for Word import
+            const docHTML = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Mark to Docs</title>
+    <style>
+        body { font-family: Calibri, Arial, sans-serif; line-height: 1.6; }
+        h1, h2, h3 { page-break-after: avoid; }
+        table { border-collapse: collapse; width: 100%; }
+        td, th { border: 1px solid #666; padding: 8px; }
+    </style>
+</head>
+<body>
+${preview.innerHTML}
+</body>
+</html>`;
+
+            const blob = new Blob([docHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ai-mark-to-docs-document.html';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            setTimeout(() => {
+                alert('HTML file optimized for Word generated.\n\nTo get a .docx file:\n1. Open the downloaded HTML file in Microsoft Word.\n2. Go to File → Save As → Choose "Word Document (*.docx)".\n\nThis preserves tables, headings, and math rendering at high fidelity.');
+            }, 400);
+        }
+
+        function copyMarkdown() {
+            navigator.clipboard.writeText(input.value).then(() => {
+                const toast = document.createElement('div');
+                toast.style.cssText = 'position:fixed; bottom:140px; left:50%; transform:translateX(-50%); background:#111827; color:white; padding:14px 28px; border-radius:9999px; z-index:100; white-space:nowrap; box-shadow:0 10px 15px -3px rgb(0 0 0 / 0.3);';
+                toast.textContent = 'Markdown copied to clipboard';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2200);
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                exportDocx();
+            }
+        });
+    </script>
+</body>
+</html>
