@@ -4,7 +4,7 @@ A clean, fast, and elegant single-file web application for previewing and export
 
 Built with a focus on simplicity, high-quality math rendering, and seamless export workflows.
 
-![Preview](https://postimg.cc/5Q2gTpPg))  
+![Preview](https://i.postimg.cc/J0bFy2Zf/Screenshot-2026-07-18-213341.png))  
 
 ## Features
 
