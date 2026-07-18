@@ -4,7 +4,7 @@ A clean, fast, and elegant single-file web application for previewing and export
 
 Built with a focus on simplicity, high-quality math rendering, and seamless export workflows.
 
-![Preview](https://i.postimg.cc/J0bFy2Zf/Screenshot-2026-07-18-213341.png))  
+![Preview](https://i.postimg.cc/J0bFy2Zf/Screenshot-2026-07-18-213341.png)  
 
 ## Features
 
@@ -33,7 +33,7 @@ Built with a focus on simplicity, high-quality math rendering, and seamless expo
 
 **Keyboard Shortcut**: `Ctrl + S` to trigger DOCX export.
 
-## Tech Stack
+## Tech-ing Stack
 
 - **Frontend**: Vanilla HTML, CSS (Tailwind CSS), JavaScript
 - **Markdown**: [Marked.js](https://github.com/markedjs/marked)
